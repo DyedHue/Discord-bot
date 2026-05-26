@@ -6,6 +6,7 @@ import logging
 from dotenv import load_dotenv
 import os
 from games.game2048 import game2048
+from games.tictactoe import tictactoe
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -66,6 +67,9 @@ async def on_message(message):
 
     if message.author == bot.user: return
     
+    elif bot.user in message.mentions:
+        await message.channel.send(embed = help_content("general"))
+
     elif lmsg.startswith(".game"):
         gamename = message.content[6:]
         if not gamename:
@@ -100,12 +104,6 @@ async def on_message(message):
     elif lmsg.startswith(".howgay"):
         gayrate = random.randint(0, 100)
         await message.channel.send(f"{message.content[8:]} is {gayrate}% gay " + "[`" + round(gayrate/10)*"🏳️‍🌈" + (10-round(gayrate/10))*"⬛" + "`]")
-
-    # elif "happy birthday" in lmsg:
-    #     try:
-    #         await message.add_reaction('🎉')
-    #     except discord.HTTPException:
-    #         print("Failed to add reaction.")
 
     elif lmsg.startswith(".mimic"):
         await message.channel.send(message.content[7:])

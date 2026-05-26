@@ -321,7 +321,6 @@ class tictactoe(discord.ui.View):
                 
     # int main()
 
-	# win=-1,movecnt=0,x=-1,y=-1
 	# title()
 	# while(opt==-1)
 	
