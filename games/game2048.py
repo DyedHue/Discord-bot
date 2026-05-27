@@ -94,76 +94,31 @@ class game2048(discord.ui.View):
 
         return 0
     
-    def move(self, c):
-        for _ in range(3):
-            for j in range(4):
-                for i in range(1, 4):
-                    if c == 'u' and self.n[i][j] != 0 and self.n[i - 1][j] == 0:
-                        self.moved = 1
-                        self.n[i - 1][j] = self.n[i][j]
-                        self.n[i][j] = 0
+    def make_move(self, c):
+        locked = [[0, 0, 0, 0] for _ in range(4)]
+        for i in range(4):
+            for j in range(1, 4):
+                ii = i; idir = 0; jj = j; jdir = 0
+                if   c == 'u': jj = i; ii = j;   idir = -1
+                elif c == 'd': jj = i; ii = 3-j; idir = 1
+                elif c == 'l':           jdir = -1
+                elif c == 'r': jj = 3-j; jdir = 1
 
-                    elif c == 'd' and self.n[4 - i][j] == 0 and self.n[4 - i - 1][j] != 0:
-                        self.moved = 1
-                        self.n[4 - i][j] = self.n[4 - i - 1][j]
-                        self.n[4 - i - 1][j] = 0
+                cnt = 0
+                while cnt < j:
+                    if self.n[ii][jj] != 0 and self.n[ii+ idir][jj + jdir] == 0:
+                        self.n[ii+ idir][jj + jdir] = self.n[ii][jj]
+                        self.n[ii][jj] = 0
+                    elif self.n[ii][jj] == self.n[ii + idir][jj + jdir] and self.n[ii][jj] != 0 and locked[ii + idir][jj + jdir] + locked[ii][jj] == 0:
+                        self.n[ii+ idir][jj + jdir] += self.n[ii][jj]
+                        self.n[ii][jj] = 0
+                        locked[ii + idir][jj + jdir] = 1
+                    else:
+                        break
 
-                    elif c == 'l' and self.n[j][3 - (i - 1)] != 0 and self.n[j][3 - (i - 1) - 1] == 0:
-                        self.moved = 1
-                        self.n[j][3 - (i - 1) - 1] = self.n[j][3 - (i - 1)]
-                        self.n[j][3 - (i - 1)] = 0
-
-                    elif c == 'r' and self.n[j][i - 1] != 0 and self.n[j][i] == 0:
-                        self.moved = 1
-                        self.n[j][i] = self.n[j][i - 1]
-                        self.n[j][i - 1] = 0
-    
-    def merge(self, c):
-        for j in range(4):
-            for i in range(3):
-                if c == 'u' and self.n[i][j] == self.n[i + 1][j]:
-                    self.moved = 1
-                    self.n[i][j] += self.n[i + 1][j]
-                    self.score += self.n[i][j]
-                    self.store += self.n[i][j]
-
-                    if self.n[i][j] > self.ht:
-                        self.ht = self.n[i][j]
-
-                    self.n[i + 1][j] = 0
-
-                elif c == 'd' and self.n[4 - (i + 1)][j] == self.n[4 - (i + 1) - 1][j]:
-                    self.moved = 1
-                    self.n[4 - (i + 1)][j] += self.n[4 - (i + 1) - 1][j]
-                    self.score += self.n[4 - (i + 1)][j]
-                    self.store += self.n[4 - (i + 1)][j]
-
-                    if self.n[4 - (i + 1)][j] > self.ht:
-                        self.ht = self.n[4 - (i + 1)][j]
-
-                    self.n[4 - (i + 1) - 1][j] = 0
-
-                elif c == 'l' and self.n[j][i] == self.n[j][i + 1]:
-                    self.moved = 1
-                    self.n[j][i] += self.n[j][i + 1]
-                    self.score += self.n[j][i]
-                    self.store += self.n[j][i]
-                    
-                    if self.n[j][i] > self.ht:
-                        self.ht = self.n[j][i]
-                        
-                    self.n[j][i + 1] = 0
-
-                elif c == 'r' and self.n[j][3 - i] == self.n[j][3 - i - 1]:
-                    self.moved = 1
-                    self.n[j][3 - i] += self.n[j][3 - i - 1]
-                    self.score += self.n[j][3 - i]
-                    self.store += self.n[j][3 - i]
-
-                    if self.n[j][3 - i] > self.ht:
-                        self.ht = self.n[j][3 - i]
-
-                    self.n[j][3 - i - 1] = 0
+                    cnt += 1
+                    ii += idir
+                    jj += jdir
 
     def undo(self):
         self.score -= self.store
@@ -206,9 +161,9 @@ class game2048(discord.ui.View):
         if arrow != 'c':
             self._pass()
             self.store = 0
-            self.move(arrow)
-            self.merge(arrow)
-            self.move(arrow)
+            self.make_move(arrow)
+            # self.merge(arrow)
+            # self.move(arrow)
 
         else:
             if self.turn != 1:
