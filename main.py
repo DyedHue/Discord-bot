@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import os
 from games.game2048 import game2048
 from games.tictactoe import GameStartView, TicTacToeGame
+from typing import Literal
 
 # 1. Load configuration and token
 load_dotenv()
@@ -40,7 +41,7 @@ def help_content(category):
         embed.add_field(name="tictactoe", value="Play Tic-Tac-Toe against the bot!", inline=False)
 
     return embed
-
+game_names = Literal["2048", "tictactoe"]
 # 3. Bot Events
 @bot.event
 async def on_ready():
@@ -73,16 +74,16 @@ async def capitalize_text(interaction: discord.Interaction, message: discord.Mes
     await interaction.response.send_message(f"{message.content.upper()}")
 
 # 5. Prefix Commands
-@bot.command()
+@bot.hybrid_command()
 async def hello(ctx):
     await ctx.send(f"Throughout heaven and earth, I alone am the brainrotten one!")
 
-@bot.command()
+@bot.hybrid_command()
 async def howgay(ctx, arg: discord.Member):
     gayrate = random.randint(0, 100)
     await ctx.send(f"{arg.mention} is {gayrate}% gay " + "[`" + round(gayrate/10)*"🏳️‍🌈" + (10-round(gayrate/10))*"⬛" + "`]")
 
-@bot.command()
+@bot.hybrid_command()
 async def grape(ctx, arg: discord.Member):
     rand = random.randint(1, 100)
     if rand <= 20:
@@ -97,32 +98,36 @@ async def grape(ctx, arg: discord.Member):
         ext = "kicked the graper in the balls ⚽⚽"
     await ctx.send(arg.mention + " " + ext)
 
-@bot.command()
+@bot.hybrid_command()
 async def mimic(ctx, *, arg):
     await ctx.send(arg)
 
-@bot.command()
-async def help(ctx, arg=None):
-    if not arg:
+@bot.hybrid_command()
+async def help(ctx, category: Literal["game"] | None = None):
+    if not category:
         embcontent = help_content("general")
     else:
-        embcontent = help_content(arg.lower())
+        embcontent = help_content(category.lower())
     await ctx.send(embed=embcontent)
 
-@bot.command()
-async def game(ctx, arg=None):
-    if not arg:
+
+@bot.hybrid_command()
+@app_commands.choices(name=[
+    app_commands.Choice(name=game, value=game) for game in game_names.__args__
+])
+async def game(ctx, name: str):
+    if not name:
         await ctx.send(embed=help_content("game"))
         return
 
-    gamename = arg.lower()
+    gamename = name.lower()
 
     if gamename == "2048":
         gameview = game2048(player=ctx.author)
 
     elif gamename == "tictactoe":
         start_view = GameStartView(ctx.author.id)
-        setup_msg = await ctx.send("Would you like to go first (X) or second (O)?", view=start_view)
+        setup_msg = await ctx.send("Would you like to go first (X) or second (O)?\nYou can't win either way LOL", view=start_view)
         
         await start_view.wait()
         
@@ -139,7 +144,7 @@ async def game(ctx, arg=None):
         return 
 
     else:
-        await ctx.send(gamename + " is not an available game")
+        await ctx.send(gamename + " is not an available game twin 🫩✌️\n\n`.help game` _for more info_")
         return
     
     await ctx.send(embed=gameview.get_game_display(), view=gameview)
