@@ -1,3 +1,4 @@
+import copy
 import random
 import discord
 
@@ -6,21 +7,14 @@ class game2048(discord.ui.View):
         super().__init__(timeout=60) # Buttons will disable automatically after 60 seconds
         self.player = player
         self.n = [[0, 0, 0, 0] for _ in range(4)]
-        self.m = [
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [0, 0, 0, 1]
-        ]
-        self.a = 0
+        self.m = [[0, 0, 0, 0] for _ in range(4)]
         self.score = 0
         self.store = 0
         self.ht = 0
-        self.arrow = ''
-        self.moved = -1
         self.turn = 1
         self.is_gameover = False
-        self.update()
+
+        self.spawn()
         self.pfpurl = self.player.display_avatar.url
         self.player_name = self.player.display_name
 
@@ -68,34 +62,32 @@ class game2048(discord.ui.View):
 
         return embed
 
-    def comp(self, s="equal"):
+    def isSpace(self):
         for i in range(4):
             for j in range(4):
-                if (s == "equal" and self.m[i][j] != self.n[i][j]) or (s == "space" and self.n[i][j] == 0):
+                if self.n[i][j] == 0:
                     return True
                     
         return False
-    
-    def _pass(self):
-        for i in range(4):
-            for j in range(4):
-                self.m[i][j] = self.n[i][j]
 
     def gameover(self):
         for j in range(3):
             for i in range(3):
-                if self.n[i][j] == self.n[i + 1][j] or self.n[i][j] == self.n[i][j + 1]: return 1
+                if self.n[i][j] == self.n[i + 1][j] or self.n[i][j] == self.n[i][j + 1]: return 0
 
         for j in range(3):
-            if self.n[3][j] == self.n[3][j + 1]: return 1
+            if self.n[3][j] == self.n[3][j + 1]: return 0
 
         for i in range(3):
-            if self.n[i][3] == self.n[i + 1][3]: return 1
+            if self.n[i][3] == self.n[i + 1][3]: return 0
 
-        return 0
+        return 1
     
-    def make_move(self, c):
+    def make_move_and_spawn(self, c):
+        self.store = 0
+        newN = copy.deepcopy(self.n)
         locked = [[0, 0, 0, 0] for _ in range(4)]
+
         for i in range(4):
             for j in range(1, 4):
                 ii = i; idir = 0; jj = j; jdir = 0
@@ -106,27 +98,35 @@ class game2048(discord.ui.View):
 
                 cnt = 0
                 while cnt < j:
-                    if self.n[ii][jj] != 0 and self.n[ii+ idir][jj + jdir] == 0:
-                        self.n[ii+ idir][jj + jdir] = self.n[ii][jj]
-                        self.n[ii][jj] = 0
-                    elif self.n[ii][jj] == self.n[ii + idir][jj + jdir] and self.n[ii][jj] != 0 and locked[ii + idir][jj + jdir] + locked[ii][jj] == 0:
-                        self.n[ii+ idir][jj + jdir] += self.n[ii][jj]
-                        self.n[ii][jj] = 0
+                    if newN[ii][jj] != 0 and newN[ii+ idir][jj + jdir] == 0:
+                        newN[ii+ idir][jj + jdir] = newN[ii][jj]
+                        newN[ii][jj] = 0
+                    elif newN[ii][jj] == newN[ii + idir][jj + jdir] and newN[ii][jj] != 0 and locked[ii + idir][jj + jdir] + locked[ii][jj] == 0:
+                        newN[ii+ idir][jj + jdir] += newN[ii][jj]
+                        self.score += newN[ii + idir][jj + jdir]
+                        self.store += newN[ii + idir][jj + jdir]
+                        newN[ii][jj] = 0
                         locked[ii + idir][jj + jdir] = 1
+                        if newN[ii + idir][jj + jdir] > self.ht: self.ht = newN[ii + idir][jj + jdir]
                     else:
                         break
 
                     cnt += 1
                     ii += idir
                     jj += jdir
+        if self.n != newN:
+            self.m = copy.deepcopy(self.n)
+            self.n = copy.deepcopy(newN)
+            self.spawn()
 
     def undo(self):
         self.score -= self.store
-        for i in range(4):
-            for j in range(4):
-                self.n[i][j] = self.m[i][j]
+        self.n = copy.deepcopy(self.m)
     
-    def spawn(self, num):
+    def spawn(self):
+        num = 2 if random.random() < 0.9 else 4
+        if self.turn == 1: self.ht = num; self.score = num
+
         b = 0
         c = 0
         x = 0
@@ -145,46 +145,23 @@ class game2048(discord.ui.View):
                         self.n[i][j] = num
                         break
 
-    def update(self):
-        if self.comp() == 1:
-            a = 2
-            if random.randint(1, 10) == 1:
-                a += 2
-
-            self.spawn(a)
-            
-            self.is_gameover = False
-            if self.comp("space") == 0 and self.gameover() == 0:
-                self.is_gameover = True
-
     def play(self, arrow):
-        if arrow != 'c':
-            self._pass()
-            self.store = 0
-            self.make_move(arrow)
-            # self.merge(arrow)
-            # self.move(arrow)
-
-        else:
-            if self.turn != 1:
-                self.undo()
-            else:
-                self._pass()
-        
+        if arrow != 'c': self.make_move_and_spawn(arrow);
+        else: self.undo()
         self.turn = 0
-        self.moved = 0
+
+        if(not self.isSpace() and self.gameover()):
+            self.is_gameover = True
 
     @discord.ui.button(label="↩️", style=discord.ButtonStyle.success, row = 0)
     async def undo_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.play('c')
-        self.update()
         await interaction.response.edit_message(embed=self.get_game_display(), view=self)
 
     @discord.ui.button(label="⬆️", style=discord.ButtonStyle.success, row = 0)
     async def up_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.is_gameover: return
         self.play('u')
-        self.update()
         await interaction.response.edit_message(embed=self.get_game_display(), view=self)
 
 
@@ -192,19 +169,16 @@ class game2048(discord.ui.View):
     async def left_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.is_gameover: return
         self.play('l')
-        self.update()
         await interaction.response.edit_message(embed=self.get_game_display(), view=self)
 
     @discord.ui.button(label="⬇️", style=discord.ButtonStyle.success, row = 1)
     async def down_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.is_gameover: return
         self.play('d')
-        self.update()
         await interaction.response.edit_message(embed=self.get_game_display(), view=self)
 
     @discord.ui.button(label="➡️", style=discord.ButtonStyle.success, row = 1)
     async def right_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.is_gameover: return
         self.play('r')
-        self.update()
         await interaction.response.edit_message(embed=self.get_game_display(), view=self)
