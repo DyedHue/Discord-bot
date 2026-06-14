@@ -8,6 +8,7 @@ import os
 from games.game2048 import game2048
 from games.tictactoe import GameStartView, TicTacToeGame
 from typing import Literal
+import hashlib
 
 # 1. Load configuration and token
 load_dotenv()
@@ -28,7 +29,7 @@ def help_content(category):
     if category == "general":
         embed.title = "Commands"
         embed.description = "`.` is the prefix and is currently unchangable"
-        embed.add_field(name="grape", value="Grape someone 🥀", inline=False)
+        # embed.add_field(name="grape", value="Grape someone 🥀", inline=False)
         embed.add_field(name="howgay", value="Check how gay someone is 🏳️‍🌈", inline=False)
         embed.add_field(name="mimic", value="Copy what you say", inline=False)
         embed.add_field(name="game", value="Start playing a game\n `.help game` to see available games", inline=False)
@@ -41,6 +42,13 @@ def help_content(category):
         embed.add_field(name="tictactoe", value="Play Tic-Tac-Toe against the bot!", inline=False)
 
     return embed
+
+def string_to_number(input_string: str) -> int:
+    string_bytes = input_string.encode('utf-8')
+    hash_object = hashlib.sha256(string_bytes)
+    hash_string = hash_object.hexdigest()
+    return int(hash_string, 16)
+
 game_names = Literal["2048", "tictactoe"]
 # 3. Bot Events
 @bot.event
@@ -80,23 +88,23 @@ async def hello(ctx):
 
 @bot.hybrid_command()
 async def howgay(ctx, arg: discord.Member):
-    gayrate = random.randint(0, 100)
+    gayrate = string_to_number(arg.display_name) % 101
     await ctx.send(f"{arg.mention} is {gayrate}% gay " + "[`" + round(gayrate/10)*"🏳️‍🌈" + (10-round(gayrate/10))*"⬛" + "`]")
 
-@bot.hybrid_command()
-async def grape(ctx, arg: discord.Member):
-    rand = random.randint(1, 100)
-    if rand <= 20:
-        ext = "was brutally graped 😢🍇"
-    elif rand <= 60:
-        ext = "got graped 🍇"
-    elif rand <= 80:
-        ext = "barely escaped being graped 😅"
-    elif rand <= 95:
-        ext = "fled from the graper 🏃‍♂️💨"
-    else:
-        ext = "kicked the graper in the balls ⚽⚽"
-    await ctx.send(arg.mention + " " + ext)
+# @bot.hybrid_command()
+# async def grape(ctx, arg: discord.Member):
+#     rand = random.randint(1, 100)
+#     if rand <= 20:
+#         ext = "was brutally graped 😢🍇"
+#     elif rand <= 60:
+#         ext = "got graped 🍇"
+#     elif rand <= 80:
+#         ext = "barely escaped being graped 😅"
+#     elif rand <= 95:
+#         ext = "fled from the graper 🏃‍♂️💨"
+#     else:
+#         ext = "kicked the graper in the balls ⚽⚽"
+#     await ctx.send(arg.mention + " " + ext)
 
 @bot.hybrid_command()
 async def mimic(ctx, *, arg):
